@@ -28,7 +28,7 @@
       <h2 id="head">Locker</h2>
       <h1 id="show"></h1>
       <div style="margin-top:18px;">
-        <button id="scanBtn" style="background:#039be5;color:#fff;border:none;padding:12px 18px;border-radius:6px;font-size:16px;cursor:pointer;">Scan QR Code</button>
+        <button id="scanBtn" disabled style="background:#039be5;color:#fff;border:none;padding:12px 18px;border-radius:6px;font-size:16px;cursor:pointer;">Scan QR Code</button>
       </div>
     </div>
 
@@ -36,11 +36,32 @@
         // Set initial header text and initialize LIFF
         document.getElementById('head').textContent = "Locker"
 
-        liff.init({ liffId: '2008561421-rBaENVkA' }, () => {
+        let liffReady = false;
+
+        // Attach a pre-init click handler to show state when user presses the button before LIFF is ready
+        const preBtn = document.getElementById('scanBtn');
+        preBtn.addEventListener('click', () => {
+          if (!liffReady) {
+            document.getElementById('show').textContent = 'LIFF is initializing or not available. Open this page inside LINE app.';
+          }
+        });
+
+        // Use promise style init so we can catch errors
+        liff.init({ liffId: '2008561421-rBaENVkA' }).then(() => {
+          liffReady = true;
           // LIFF initialized. Enable the scan button and attach handler.
           const scanBtn = document.getElementById('scanBtn');
           scanBtn.disabled = false;
           scanBtn.addEventListener('click', startScan);
+          document.getElementById('show').textContent = 'LIFF initialized. Tap Scan QR Code.';
+        }).catch(err => {
+          document.getElementById('show').textContent = 'LIFF init error: ' + err;
+          console.error('liff.init error', err);
+        });
+
+        // Surface uncaught JS errors to the page for debugging
+        window.addEventListener('error', function (e) {
+          document.getElementById('show').textContent = 'JS error: ' + e.message;
         });
 
       /**
