@@ -2,21 +2,18 @@
 <html>
   <head>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>LIFF Scanner</title>
+    <title>LIFF Scanner URL Scheme</title>
     <link rel="stylesheet" href="style.css">
 
     <script charset="utf-8" src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
 
     <style>
+      /* Styles เดิม */
       body { background: #ECEFF1; color: rgba(0,0,0,0.87); font-family: Roboto, Helvetica, Arial, sans-serif; margin: 0; padding: 0; }
       #message { background: white; max-width: 360px; margin: 100px auto 16px; padding: 32px 24px; border-radius: 3px; text-align: center; }
       #message h2 { color: #ffa100; font-weight: bold; font-size: 16px; margin: 0 0 8px; }
-      #message h1 { font-size: 22px; font-weight: 300; color: rgba(0,0,0,0.6); margin: 0 0 16px; }
-      #message p { line-height: 140%; margin: 16px 0 24px; font-size: 14px; }
-      #message a { display: block; text-align: center; background: #039be5; text-transform: uppercase; text-decoration: none; color: white; padding: 16px; border-radius: 4px; }
-      #message, #message a { box-shadow: 0 1px 3px rgba(0,0,0,0.12), 0 1px 2px rgba(0,0,0,0.24); }
-      #load { color: rgba(0,0,0,0.4); text-align: center; font-size: 13px; }
-      #show { white-space: pre-wrap; font-size: 14px; text-align: left; } /* ปรับการแสดงผลเพื่อให้ข้อความหลายบรรทัดอ่านง่าย */
+      #show { white-space: pre-wrap; font-size: 14px; text-align: left; }
+      #scanBtn { background:#039be5;color:#fff;border:none;padding:12px 18px;border-radius:6px;font-size:16px;cursor:pointer; }
       @media (max-width: 600px) {
         body, #message { margin-top: 0; background: white; box-shadow: none; }
         body { border-top: 16px solid #ffa100; }
@@ -26,10 +23,10 @@
   <body>
 
     <div id="message">
-      <h2 id="head">LIFF QR Scanner</h2>
+      <h2 id="head">LIFF QR Scanner (Scheme)</h2>
       <div id="show">Loading LIFF...</div> 
       <div style="margin-top:18px;">
-        <button id="scanBtn" disabled style="background:#039be5;color:#fff;border:none;padding:12px 18px;border-radius:6px;font-size:16px;cursor:pointer;">Scan QR Code</button>
+        <button id="scanBtn" disabled>Scan QR Code</button>
       </div>
     </div>
 
@@ -39,82 +36,73 @@
       const scanBtn = document.getElementById('scanBtn');
       let currentUID = '';
 
-      // --- 1. INITIALIZE LIFF ---
-      liff.init({ liffId: LIFF_ID })
-        .then(() => {
-          showLiffStatus();
-        })
-        .catch(err => {
-          showElement.textContent = 'LIFF init error: ' + err;
-          console.error('liff.init error', err);
-        });
-
-      // --- 2. SETUP BUTTON HANDLER ---
-      scanBtn.addEventListener('click', startScan);
-      
-      // --- 3. SHOW LIFF STATUS AND UID ---
-      async function showLiffStatus() {
-        if (!liff.isLoggedIn()) {
-          // ถ้าไม่ได้เข้าสู่ระบบ ให้บอกผู้ใช้หรือพยายาม Login
-          scanBtn.disabled = true;
-          scanBtn.textContent = 'Login Required';
-          // หรือจะใช้ liff.login() ตรงนี้ก็ได้
-          showElement.textContent = 'Please login to LINE to use this function.';
-          return;
-        }
-
+      // --- 1. FUNCTION TO SHOW UID AND QR RESULT ---
+      async function updateDisplay(qrResult = null) {
+        let info = "";
         try {
-          // ดึง UID และแสดงผลทันที
+          // ดึง UID
           const profile = await liff.getProfile();
           currentUID = profile.userId;
 
-          let info = "✅ LIFF Ready\n";
+          info += "✅ LIFF Ready\n";
           info += `👤 Your UID: ${currentUID}\n`;
           info += `Platform: ${liff.getOS()} / LINE v${liff.getLineVersion()}`;
-          showElement.textContent = info;
-          
-          scanBtn.disabled = false;
+
+          // เพิ่มผลลัพธ์ QR ถ้ามี
+          if (qrResult) {
+            info += `\n\n🔎 QR Result: ${qrResult}`;
+          }
+
         } catch (err) {
-          showElement.textContent = 'Failed to get profile: ' + err;
+          info = 'Failed to get profile or init: ' + err.message;
           scanBtn.disabled = true;
         }
+        showElement.textContent = info;
       }
 
-      // --- 4. START QR SCANNING FLOW ---
-      async function startScan() {
-        if (!liff.isInClient()) {
-          showElement.textContent = '❌ Must be opened inside the LINE app.';
-          return;
-        }
-
-        if (!liff.scanCode) {
-          showElement.textContent = '❌ scanCode API not available (Check LIFF Scope).';
-          return;
-        }
-        
-        scanBtn.disabled = true;
-        scanBtn.textContent = 'Scanning...';
-
-        try {
-          const result = await liff.scanCode();
-          const qrValue = result.value || 'No QR Code scanned.';
-
-          // อัปเดตการแสดงผลด้วย UID และค่า QR ที่สแกนได้
-          let info = "✅ LIFF Ready\n";
-          info += `👤 Your UID: ${currentUID}\n`;
-          info += `🔎 QR Value: ${qrValue}`;
-          showElement.textContent = info;
-
+      // --- 2. LIFF INITIALIZATION AND PARAMETER CHECK ---
+      liff.init({ liffId: LIFF_ID })
+        .then(async () => {
           scanBtn.disabled = false;
-          scanBtn.textContent = 'Scan QR Code';
           
-        } catch (err) {
-          // ดักจับ Error จากการสแกน (เช่น ผู้ใช้ยกเลิก หรือ กล้องเปิดไม่ได้)
-          showElement.textContent = `Scan failed: ${err.message || err}`;
-          scanBtn.disabled = false;
-          scanBtn.textContent = 'Scan QR Code (Error)';
+          // ตรวจสอบ Query Parameter ที่มาจาก LINE หลังจากสแกน QR
+          const urlParams = new URLSearchParams(window.location.search);
+          const scannedValue = urlParams.get('param');
+
+          if (scannedValue) {
+            // ถ้ามีค่าจากการสแกน (param) ให้แสดงผลลัพธ์
+            await updateDisplay(decodeURIComponent(scannedValue));
+            
+            // ล้าง Query Parameter ใน URL เพื่อไม่ให้สแกนซ้ำเมื่อ Refresh
+            // (เป็นการทำความสะอาด URL ในเบราว์เซอร์ LIFF)
+            history.replaceState(null, null, window.location.pathname);
+            
+          } else {
+            // ถ้าไม่มีค่าจากการสแกน ให้แสดงแค่ UID
+            await updateDisplay();
+          }
+        })
+        .catch(err => {
+          showElement.textContent = 'LIFF init error: ' + err.message;
+          console.error('liff.init error', err);
+        });
+
+      // --- 3. QR SCAN BUTTON HANDLER (Using URL Scheme) ---
+      scanBtn.addEventListener('click', () => {
+        if (!liff.isInClient()) {
+          alert('กรุณาเปิดหน้านี้ในแอปพลิเคชัน LINE');
+          return;
         }
-      }
+
+        // URL Scheme ของ LINE สำหรับเปิดกล้องสแกน
+        // redirectUri คือ URL ของ LIFF หน้าปัจจุบัน เพื่อให้ LINE ส่งค่าสแกนกลับมาที่นี่
+        const currentUrl = window.location.href;
+        const redirectUri = encodeURIComponent(currentUrl);
+        const lineQrScheme = `https://line.me/R/NV/QRCodeReader?redirectUri=${redirectUri}`;
+
+        // ทำการ Redirect ไปยัง URL Scheme
+        window.location.href = lineQrScheme;
+      });
 
     </script>
 
