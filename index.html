@@ -33,9 +33,9 @@
       document.getElementById('head').textContent = "QR code scanner opening ..."
 
       liff.init({ liffId: '2008561421-rBaENVkA' }, () => {
-          // const idToken = liff.getDecodedIDToken();
-          // console.log(idToken) // print decoded idToken object
-          // displayLiffData()
+          //  const idToken = liff.getDecodedIDToken();
+          //  console.log(idToken) // print decoded idToken object
+          //  displayLiffData()
           scanQrCodeButton()
       });
 
@@ -59,18 +59,45 @@
           sendAlertIfNotInClient();
         } else {
           if (liff.scanCode) {
-              liff.scanCode().then(result => {
-                  // e.g. result = { value: "Hello LIFF app!" }
-                  const stringifiedResult = JSON.stringify(result);
-                  document.getElementById('show').textContent = stringifiedResult
-                  if(!result.value) return alert(result)
-                  toggleQrCodeReader(result.value);
-              }).catch(err => {
-                  document.getElementById('show').textContent = "scanCode failed! " + err;
+            liff.scanCode().then(async (result) => {
+
+              // 1) ค่า QR
+              const qrValue = result.value;
+
+              // 2) UID ของเรา
+              const profile = await liff.getProfile();
+              const myUid = profile.userId;
+
+              // 3) แสดงผลบนหน้าเว็บ
+              const infoText = 
+                "QR Value: " + qrValue + "\n" + 
+                "My UID: " + myUid;
+
+              document.getElementById('show').textContent = infoText;
+
+              // 4) ส่งข้อความกลับไปยังแชท LINE
+              liff.sendMessages([
+                {
+                  type: 'text',
+                  text: "QR Value: " + qrValue
+                },
+                {
+                  type: 'text',
+                  text: "My UID: " + myUid
+                }
+              ]).then(() => {
+                document.getElementById('head').textContent = "Message sent!";
+                setTimeout(() => liff.closeWindow(), 1000);
               });
+
+            }).catch(err => {
+              document.getElementById('show').textContent = "scanCode failed! " + err;
+            });
           }
         }
       }
+
+  
 
       function sendAlertIfNotInClient() {
         alert('!liff.isInClient()')
