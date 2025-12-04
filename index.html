@@ -33,9 +33,9 @@
       document.getElementById('head').textContent = "QR code scanner opening ..."
 
       liff.init({ liffId: '2008561421-rBaENVkA' }, () => {
-           const idToken = liff.getDecodedIDToken();
-           console.log(idToken) // print decoded idToken object
-           displayLiffData()
+          //  const idToken = liff.getDecodedIDToken();
+          //  console.log(idToken) // print decoded idToken object
+          //  displayLiffData()
           scanQrCodeButton()
       });
 
@@ -70,7 +70,7 @@
 
               // 3) แสดงผลบนหน้าเว็บ
               const infoText = 
-                "QR Value: " + qrValue + "\n" + "\n" +
+                "QR Value: " + qrValue + "\n" + 
                 "My UID: " + myUid;
 
               document.getElementById('show').textContent = infoText;
