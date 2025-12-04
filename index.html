@@ -31,12 +31,12 @@
     </div>
 
     <script>
-      // ใช้ async/await แทน callback เพื่อความเข้ากันได้กับ iOS
+      // ใช้ async/await สำหรับ LIFF
       async function initializeLiff() {
         try {
           document.getElementById('head').textContent = "กำลังเชื่อมต่อ LIFF...";
           
-          // เริ่มต้น LIFF ด้วย Promise
+          // เริ่มต้น LIFF
           await liff.init({ liffId: '2008561421-rBaENVkA' });
           
           document.getElementById('head').textContent = "กำลังเปิดกล้อง...";
@@ -47,17 +47,17 @@
             return;
           }
 
-          // ตรวจสอบว่า browser รองรับ scanCode หรือไม่
-          if (!liff.scanCode) {
+          // ตรวจสอบว่า browser รองรับ scanCodeV2 หรือไม่
+          if (!liff.scanCodeV2) {
             document.getElementById('head').textContent = "ไม่รองรับการสแกน QR";
             document.getElementById('show').textContent = "อุปกรณ์นี้ไม่รองรับการสแกน QR Code";
             return;
           }
 
-          // รอสักครู่ให้ LIFF พร้อมใช้งานอย่างสมบูรณ์ (สำคัญสำหรับ iOS)
-          await new Promise(resolve => setTimeout(resolve, 300));
+          // รอสักครู่ให้ LIFF พร้อมใช้งาน (สำคัญสำหรับ iOS)
+          await new Promise(resolve => setTimeout(resolve, 500));
 
-          // เรียกใช้ scanCode
+          // เรียกใช้ scanCodeV2 (รองรับ iOS)
           await scanQrCode();
 
         } catch (error) {
@@ -69,12 +69,12 @@
       }
 
       /**
-       * ฟังก์ชันสแกน QR Code
+       * ฟังก์ชันสแกน QR Code ด้วย scanCodeV2 (รองรับ iOS)
        */
       async function scanQrCode() {
         try {
-          // เปิดกล้องสแกน QR
-          const result = await liff.scanCode();
+          // เปิดกล้องสแกน QR ด้วย scanCodeV2
+          const result = await liff.scanCodeV2();
           
           // ค่า QR ที่สแกนได้
           const qrValue = result.value;
@@ -111,7 +111,7 @@
           }, 1000);
           
         } catch (error) {
-          console.error('scanCode failed', error);
+          console.error('scanCodeV2 failed', error);
           
           // แสดง error message ที่เป็นมิตร
           let errorMsg = "ไม่สามารถสแกน QR Code ได้";
@@ -120,11 +120,13 @@
             errorMsg = "กรุณาอนุญาตให้เข้าถึงกล้อง";
           } else if (error.code === 'EXCEPTION') {
             errorMsg = "ผู้ใช้ยกเลิกการสแกน";
+          } else if (error.message && error.message.includes('permission')) {
+            errorMsg = "กรุณาอนุญาตให้เข้าถึงกล้องในการตั้งค่า";
           }
           
           document.getElementById('head').textContent = "เกิดข้อผิดพลาด";
           document.getElementById('show').innerHTML = 
-            '<span class="error">' + errorMsg + '<br><br>' + error.message + '</span>';
+            '<span class="error">' + errorMsg + '<br><br>Details: ' + error.message + '</span>';
         }
       }
 
